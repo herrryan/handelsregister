@@ -14,10 +14,12 @@ sys.setdefaultencoding('utf8')
 headers=[{'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'},\
          {'User-Agent':'Mozilla/5.0 (Windows NT 6.2) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.12 Safari/535.11'},\
          {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)'}];
+register_list = [];
 
 def handelsregister_spider():
     for pageNum in range(0, 10500, 1500):
         getRegisterHtml(pageNum)
+
 def getRegisterHtml(pageNum):
     register_list = [];
 
@@ -41,10 +43,38 @@ def getXmlLink(url):
     excerpt = soup.findAll(lambda tag: (tag.name == 'a' and tag.text == '<Excerpt>'), href=True)
     if (excerpt):
         xml_link = excerpt[0]['href']
+        parseXml(xml_link);
     else:
         print "empty found"
         return;
     print xml_link
+
+def parseXml(url):
+    #url = "http://be.powernet.ch/webservices/inet/hrg/hrg.asmx/getExcerpt?Chnr=CH-092.7.002.980-9&Amt=36&Lang=1&Code=5cd792dec3687030282338e41528575d";
+    xmlsoup = BeautifulSoup(read(url));
+    if (xmlsoup.find("native", {'status': '1'})):
+        stiftungName = xmlsoup.find("native", {'status': '1'}).text.replace("\"","").strip()
+        if ("Personalfürsorgestiftung" not in stiftungName or 
+            "Wohlfahrtsstiftung" not in stiftungName or 
+            "Fürsorgestiftung" not in stiftungName or 
+            "BVG-Personalfürsorgestiftung" not in stiftungName):
+        
+            stiftungSitzKanton = xmlsoup.find("canton").text;
+            stiftungSitzStadt = xmlsoup.findAll("seat", {'status': '1'})[0].find('seattext').text;
+            persons = xmlsoup.findAll("person", {'status': '1'})
+            for person in persons:
+                if (person.find('firstname') and person.find('name')):
+                    print [stiftungName, person.find('firstname').text, person.find('name').text, stiftungSitzKanton, stiftungSitzStadt]
+                    register_list.append([stiftungName, person.find('firstname').text, person.find('name').text, stiftungSitzKanton, stiftungSitzStadt])
+
+def persist_to_excel(register_list):
+    wb = Workbook(optimized_write=True);
+    ws = wb.create_sheet(title="Handelsregister")
+    ws.append(['Stiftung Name', 'Vorname', 'Nachname', 'Kanton', 'Stadt']);
+    for register in register_list:
+        ws.append([register[0],register[1], register[2], register[3], register[4]]);
+    save_path='Handelsregister.xlsx';
+    wb.save(save_path)
 
 def read(url):
     print "Pulling information from [%s]" % url;
@@ -58,4 +88,6 @@ def read(url):
 
 
 if __name__=='__main__':
-    register_list = handelsregister_spider();
+    handelsregister_spider();
+    #parseXml("")
+    persist_to_excel(register_list)
