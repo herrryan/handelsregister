@@ -58,28 +58,35 @@ def parseXml(url):
             "Wohlfahrtsstiftung" not in stiftungName or 
             "Fürsorgestiftung" not in stiftungName or 
             "BVG-Personalfürsorgestiftung" not in stiftungName):
-        
+
             stiftungSitzKanton = xmlsoup.find("canton").text;
             stiftungSitzStadt = xmlsoup.findAll("seat", {'status': '1'})[0].find('seattext').text;
             persons = xmlsoup.findAll("person", {'status': '1'})
             for person in persons:
                 if (person.find('firstname') and person.find('name')):
-                    print [stiftungName, person.find('firstname').text, person.find('name').text, stiftungSitzKanton, stiftungSitzStadt]
-                    register_list.append([stiftungName, person.find('firstname').text, person.find('name').text, stiftungSitzKanton, stiftungSitzStadt])
+                    print [stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt]
+                    register_list.append([stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt])
+
+def remove_title(name):
+    if ("." in name.rstrip(".")):
+        last_dot_pos = name.rstrip(".").rfind(".")
+        return name[last_dot_pos+2:]
+    else:
+        return name
 
 def persist_to_excel(register_list):
     wb = Workbook(optimized_write=True);
     ws = wb.create_sheet(title="Handelsregister")
-    ws.append(['Stiftung Name', 'Vorname', 'Nachname', 'Kanton', 'Stadt']);
+    ws.append(['Stiftung Name', 'Vorname', 'Cleaned Vorname', 'Nachname', 'Kanton', 'Stadt']);
     for register in register_list:
-        ws.append([register[0],register[1], register[2], register[3], register[4]]);
+        ws.append([register[0],register[1], register[2], register[3], register[4], register[5]]);
     save_path='Handelsregister.xlsx';
     wb.save(save_path)
 
 def read(url):
     print "Pulling information from [%s]" % url;
     try:
-        req = urllib2.Request(url, headers=headers[1]);
+        req = urllib2.Request(url, headers=headers[0]);
         source_code = urllib2.urlopen(req).read();
         plain_text=str(source_code);
         return plain_text;
