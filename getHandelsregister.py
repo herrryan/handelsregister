@@ -13,7 +13,7 @@ sys.setdefaultencoding('utf8')
 #Some User Agents    
 headers=[{'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'},\
          {'User-Agent':'Mozilla/5.0 (Windows NT 6.2) AppleWebKit/535.11 (KHTML, like Gecko) Chrome/17.0.963.12 Safari/535.11'},\
-         {'User-Agent': 'Mozilla/5.0 (compatible; MSIE 10.0; Windows NT 6.2; Trident/6.0)'}];
+         {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'}];
 register_list = [];
 
 def handelsregister_spider():
@@ -86,12 +86,15 @@ def persist_to_excel(register_list):
 def read(url):
     print "Pulling information from [%s]" % url;
     try:
-        req = urllib2.Request(url, headers=headers[0]);
+        req = urllib2.Request(url, headers=headers[2]);
         source_code = urllib2.urlopen(req).read();
         plain_text=str(source_code);
         return plain_text;
     except (urllib2.HTTPError, urllib2.URLError), e:
-        print e
+        req = urllib2.Request(url, headers=headers[1]);
+        source_code = urllib2.urlopen(req).read();
+        plain_text=str(source_code);
+        return plain_text;
 
 
 if __name__=='__main__':
