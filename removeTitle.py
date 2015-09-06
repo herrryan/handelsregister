@@ -12,20 +12,28 @@ sys.setdefaultencoding('utf8')
 
 def remove_title(name):
     #name = "Prof. Dr. Dr. hc. mult. Hermann Felix H."
+
     if ("." in name.rstrip(".")):
         last_dot_pos = name.rstrip(".").rfind(".")
-        print name[last_dot_pos+2:]
+        return name[last_dot_pos+2:]
     else:
-        print name
+        return name
 
 def read_excel_file():
     wb = open_workbook('Handelsregister_mit_filter_00.xlsx')
-    firstname_list = wb.sheet_by_index(0).col_values(1, start_rowx=1);
+    firstname_list = wb.sheet_by_index(0).col_values(1, start_rowx=1, end_rowx=None);
     cleaned_list = []
+    filename = "cleaned.csv"
+    target = open(filename, 'w')
+    target.truncate()
     for firstname in firstname_list:
-        remove_title(firstname)
+        #print firstname
+        target.write(remove_title(firstname))
+        target.write("\n")
+    target.close()
         #cleaned_list.append(remove_title(firstname))
     #print cleaned_list
 
 if __name__=='__main__':
     read_excel_file()
+    #remove_title("Marcel André")
