@@ -4,6 +4,7 @@ import urllib
 import urllib2
 import requests
 import re
+import time
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
 
@@ -32,6 +33,8 @@ def getRegisterHtml(pageNum):
         return;
     count = 0;
     for register_link in all_registers_link:
+        time.sleep(1)
+        print "waiting 1s until next request"
         if "HTML" in register_link['href']:
             count += 1
             getXmlLink(register_link['href'])
@@ -50,7 +53,7 @@ def getXmlLink(url):
     print xml_link
 
 def parseXml(url):
-    #url = "http://be.powernet.ch/webservices/inet/hrg/hrg.asmx/getExcerpt?Chnr=CH-092.7.002.980-9&Amt=36&Lang=1&Code=5cd792dec3687030282338e41528575d";
+    #url = "http://bs.powernet.ch/webservices/inet/hrg/hrg.asmx/getExcerpt?Chnr=CH-270.7.001.449-6&Amt=270&Lang=1&Code=20eba7e350c066ed42e19c02466bb9fb";
     xmlsoup = BeautifulSoup(read(url));
     if (xmlsoup.find("native", {'status': '1'})):
         stiftungName = xmlsoup.find("native", {'status': '1'}).text.replace("\"","").strip()
@@ -64,8 +67,12 @@ def parseXml(url):
             persons = xmlsoup.findAll("person", {'status': '1'})
             for person in persons:
                 if (person.find('firstname') and person.find('name')):
-                    print [stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt]
-                    register_list.append([stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt])
+                    if (person.find('residence')):
+                        wohnsitz = person.find('residence').find('city').text;
+                    else:
+                        wohnsitz = u'Unknown'
+                    print [stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt, wohnsitz]
+                    register_list.append([stiftungName, person.find('firstname').text, remove_title(person.find('firstname').text), person.find('name').text, stiftungSitzKanton, stiftungSitzStadt, wohnsitz])
 
 def remove_title(name):
     if ("." in name.rstrip(".")):
@@ -77,9 +84,9 @@ def remove_title(name):
 def persist_to_excel(register_list):
     wb = Workbook(optimized_write=True);
     ws = wb.create_sheet(title="Handelsregister")
-    ws.append(['Stiftung Name', 'Vorname', 'Cleaned Vorname', 'Nachname', 'Kanton', 'Stadt']);
+    ws.append(['Stiftung Name', 'Vorname', 'Cleaned Vorname', 'Nachname', 'Kanton', 'Stadt', 'Wohnsitz']);
     for register in register_list:
-        ws.append([register[0],register[1], register[2], register[3], register[4], register[5]]);
+        ws.append([register[0],register[1], register[2], register[3], register[4], register[5], register[6]]);
     save_path='Handelsregister.xlsx';
     wb.save(save_path)
 
