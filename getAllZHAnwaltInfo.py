@@ -5,6 +5,7 @@ import urllib2
 import requests
 import re
 import time
+import json
 from bs4 import BeautifulSoup
 from openpyxl import Workbook
 
@@ -13,10 +14,11 @@ sys.setdefaultencoding('utf8')
 
 #Some User Agents    
 headers=[{'User-Agent':'Mozilla/5.0 (Windows; U; Windows NT 6.1; en-US; rv:1.9.1.6) Gecko/20091201 Firefox/3.5.6'},\
-         {'User-Agent':'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'},\
+         {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/46.0.2490.71 Safari/537.36'},\
          {'User-Agent': 'Mozilla/5.0 (Windows NT 6.1) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/41.0.2228.0 Safari/537.36'}];
-register_list = [];
+#lawyer_ids = ["hbeed13602b9b0e6ecb5b568ff5058f07", "h4b2944dfea61be814911110c21ddd974"];
 lawyer_ids = [];
+info_list = [];
 
 def handelsregister_spider():
     for pageNum in range(0, 10500, 1500):
@@ -82,22 +84,63 @@ def remove_title(name):
     else:
         return name
 
-def persist_to_excel(register_list):
+def persist_to_excel():
     wb = Workbook(optimized_write=True);
-    ws = wb.create_sheet(title="Handelsregister")
-    ws.append(['Stiftung Name', 'Vorname', 'Cleaned Vorname', 'Nachname', 'Kanton', 'Stadt', 'Wohnsitz']);
-    for register in register_list:
-        ws.append([register[0],register[1], register[2], register[3], register[4], register[5], register[6]]);
-    save_path='Handelsregister.xlsx';
+    ws = wb.create_sheet(title="anwalt")
+    for info in info_list:
+        ws.append(info);
+    save_path='fullinfo.xlsx';
     wb.save(save_path)
 
+def save_json():
+    with open('data.txt', 'w') as outfile:
+        json.dump(info_list, outfile)
+
 def getDetailInfo():
-    #for lawyer_id in lawyer_ids:
-    #    time.sleep(1)
-    #    print "waiting 1s to get information of", lawyer_id
-    url = "http://www.zav.ch/modules/Mitglieder/templates/suche_detail_ajax.php?senderid=h4b2944dfea61be814911110c21ddd974"
-    soup = BeautifulSoup(read(url));
-    print soup.findAll("p")
+    true_tag = ["Jahrgang", "Patentjahr", "Arbeitsgebiete", "Sprachen", "Kanzleiprofil", "Adresse", "Telefon", "Fax", "E-Mail", "Homepage"]
+    for lawyer_id in lawyer_ids:
+        time.sleep(1)
+        print "waiting 1s to get information of", lawyer_id
+        url = "http://www.zav.ch/modules/Mitglieder/templates/suche_detail_ajax.php?senderid=" + lawyer_id;
+        #url = "http://www.zav.ch/modules/Mitglieder/templates/suche_detail_ajax.php?senderid=hbeed13602b9b0e6ecb5b568ff5058f07";
+      #  url = "http://www.zav.ch/modules/Mitglieder/templates/suche_detail_ajax.php?senderid=h5982e32d2cd58d7f3e71f90600b59267";
+        true_tags = ["Jahrgang", "Patentjahr", "Bevorzugte Arbeitsgebiete" , "Sprachen", "Fachanwältin SAV", "Kanzleiprofil", "Adresse", "Telefon", "Fax", "E-Mail", "Homepage"]
+        soup = BeautifulSoup(read_withcookie(url), "html.parser");
+        
+        tags = soup.findAll("p", {'class': 'columns alpha three'});
+        contents = soup.findAll("p", {'class' : 'columns omega five'});
+        name = soup.find("h2")
+        if (name == None):
+            continue;
+        print name.text.split(".")
+        info = [];
+        info.append(name.text);
+        idx = 0;
+        for i in range(0, len(true_tags)):
+            if (idx > len(tags)-1):
+                break;
+            if (tags[idx].text.rstrip(":") == true_tags[i]):
+                if (true_tags[i] == "Adresse"):
+                    address = contents[idx].text.split("#");
+                    info.append(address[0]);
+                    if ("Postfach" in address[1]) :
+                        info.append(address[1]);
+                        info.append(address[2]);
+                    else:
+                        info.append("unknown");
+                        info.append(address[1]);
+                else:
+                    info.append(contents[idx].text);
+                idx += 1;
+            else:
+                if (true_tags[i] == "Adresse"):
+                    info.append("unknown");
+                    info.append("unknown");
+                    info.append("unknown");
+                else:
+                    info.append("unknown");
+        print str(info)
+        info_list.append(info)
 
 def getLawyerIds():
     url = "http://localhost:8000/search.html";
@@ -123,7 +166,33 @@ def read(url):
         plain_text=str(source_code);
         return plain_text;
 
+def read_withcookie(url):
+    print "Pulling information from [%s]" % url;
+    try:
+        req = urllib2.Request(url, headers=headers[1]);
+        req.add_header("cookie", "PHPSESSID=rgm7r2rck17riptq88iftkkvm3");
+        source_code = urllib2.urlopen(req).read();
+        plain_text=str(re.sub('<br/>','#', source_code));
+        return plain_text;
+    except (urllib2.HTTPError, urllib2.URLError), e:
+        req = urllib2.Request(url, headers=headers[1]);
+        req.add_header("cookie", "PHPSESSID=rgm7r2rck17riptq88iftkkvm3");
+        source_code = urllib2.urlopen(req).read();
+        plain_text=str(re.sub('<br/>','#', source_code));
+        return plain_text;
+
+def load_file():
+    for info in info_list:
+        data = json.loads(info);
+        if (data['name']):
+            print data['name']
+        
 
 if __name__=='__main__':
-    #getLawyerIds();
+    getLawyerIds();
     getDetailInfo();
+    #persist_to_file();
+    #load_file();
+    persist_to_excel();
+    #save_json();
+    #load_json();

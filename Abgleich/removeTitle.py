@@ -12,12 +12,21 @@ sys.setdefaultencoding('utf8')
 
 def remove_title(name):
     #name = "Prof. Dr. Dr. hc. mult. Hermann Felix H."
-
+    #name = "Andreas B."
     if ("." in name.rstrip(".")):
         last_dot_pos = name.rstrip(".").rfind(".")
-        return name[last_dot_pos+2:]
+        inter_result = name[last_dot_pos+2:]
+        if ("." in inter_result):
+            name_array = inter_result.split(" ")
+            return (" ").join(name_array[:-1])
+        else:
+            return inter_result
     else:
-        return name
+        if ("." in name):
+            name_array = name.split(" ")
+            return (" ").join(name_array[:-1])
+        else:
+            return name
 
 def read_excel_file():
     wb = open_workbook('Handelsregister.xlsx')
@@ -36,4 +45,4 @@ def read_excel_file():
 
 if __name__=='__main__':
     read_excel_file()
-    #remove_title("Marcel André")
+    #print remove_title("Marcel André")
