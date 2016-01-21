@@ -89,7 +89,7 @@ def retrieveEmailAddress(soup):
 	
 def getSavHtmlAtPage(pageNum): 
 	data=urllib.urlencode({'naechste' : pageNum}); 
-	url="http://www.sav-fsa.ch/de/anwaltssuche.html?"; 
+	url = "http://suche.sav-fsa.ch/de/anwaltssuche.iframe.html?"
 	soup = BeautifulSoup(post(url, data), 'html.parser');
 	return retrieveUserId(soup);
 
